@@ -50,7 +50,7 @@ for ii=1:length(files)
     first=find(alpha_all>20000);
     first=first(1);
     % upper
-    last=find(alpha_all<50000);
+    last=find(alpha_all<60000);
     last=last(end);
     
     x=x_all(first:last);
