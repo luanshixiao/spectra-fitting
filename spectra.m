@@ -149,5 +149,3 @@ end
 
 ret=table(Eg',slope','VariableNames',{'Eg','slope'},'RowNames',sample');
 writetable(ret,path+"Eg&slope.csv",'Delimiter',',','WriteRowNames',true)
-
-time=[0,1,5,15,30,60,240];
