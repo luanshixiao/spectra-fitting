@@ -1,0 +1,149 @@
+clear
+close all
+
+%% read folder
+
+% path
+path="C:\Users\ASDFGHJKL\OneDrive - mail2.sysu.edu.cn\桌面\光敏性\实验\光度计\all"+"\";
+files=dir(path+"*.asc");
+% film thickness(nm)
+d=700;
+
+%% read opts
+
+opts = delimitedTextImportOptions("NumVariables", 2);
+opts.DataLines = [91, Inf];
+opts.Delimiter = "\t";
+opts.VariableTypes = ["double", "double"];
+opts.ExtraColumnsRule = "ignore";
+opts.EmptyLineRule = "skip";
+
+%% for
+
+for ii=1:length(files)
+    
+    %% prepare spectrum data
+    
+    filename=files(ii).name;
+    sample(ii)=string(filename(1:end-4));
+    spec=readtable(path+filename,opts);
+    spec=table2array(spec);
+    
+    T_all=spec(:,2)/100;
+    % exclude negative values
+    T_all(T_all<0.01)=0;
+    
+    %% convert data
+    
+    % lambda
+    lambda=spec(:,1);
+    % x_all=E=hv
+    x_all=1240./lambda;
+    % T_all=exp(-alpha_all*d) >> alpha_all=-ln(T_all)/d
+    alpha_all=-log(T_all)./(d*1e-7);
+    % y_all=sqrt(alpha_all*hv)
+    y_all=sqrt(alpha_all.*x_all);
+    
+    %% fitting region
+    
+    % lower
+    first=find(alpha_all>20000);
+    first=first(1);
+    % upper
+    last=find(alpha_all<50000);
+    last=last(end);
+    
+    x=x_all(first:last);
+    y=y_all(first:last);
+    
+    
+    %% fit
+    
+    x0=x(1):0.001:x(end);
+    y0=interp1(x,y,x0,'linear');
+    
+    [xData, yData] = prepareCurveData( x0, y0 );
+    
+    region=find(xData>(xData(1)+0.15));
+    region=region(1);
+    step=floor((region-1)/50);
+    
+    jj=1;
+    while jj>=1
+        
+        left=1+(jj-1)*step;
+        right=left+region;
+        Eleft=xData(left);
+        Eright=xData(right);
+        xfit=xData(left:right);
+        yfit=yData(left:right);
+        ft = fittype( 'poly1' );
+        [fitresult, gof] = fit( xfit, yfit, ft );
+        
+        A(jj,1)=left;
+        A(jj,2)=right;
+        A(jj,3)=Eleft;
+        A(jj,4)=Eright;
+        A(jj,5)=gof.adjrsquare;
+        A(jj,6)=gof.rmse;
+        
+        % fitting linestyle: y=kx+b
+        eq(jj,1)=fitresult.p1;%k=p1
+        eq(jj,2)=fitresult.p2;%b=p2
+        
+        if (right+step)>length(xData)
+            break
+        end
+        
+        jj=jj+1;
+        
+    end
+    
+    %% the best fitresult
+    
+    [~,r]=min(A(:,6));
+    k=eq(r,1);
+    b=eq(r,2);
+    
+    %% calculate Eg and slope by fitresult
+    
+    Eg(ii)=roundn(-b/k,-2);
+    slope(ii)=roundn(k,0);
+    
+    %% plot
+    
+    figure('Visible','off')
+    hold on
+    
+    f1=plot(x_all,y_all);
+    f1.LineWidth=2;
+    f1.Color='black';
+    
+    f2=fplot(@(x) k*x+b);
+    f2.LineWidth=1;
+    f2.Color='blue';
+    f2.LineStyle='--';
+    
+    str_Eg=num2str(Eg(ii));
+    t1=text(3,100,['Eg=' str_Eg]);
+    t1.FontSize=20;
+    
+    t2=text(3,50,"slope="+num2str(slope(ii)));
+    t2.FontSize=20;
+    
+    axis([1.6 3.6 0 500])
+    xlabel('$$ h{\nu} $$','Interpreter','latex');
+    ylabel('$$ ({\alpha}h{\nu})^{1/2} $$','Interpreter','latex');
+    
+    title(sample(ii))
+    
+    %% save plot
+    
+    
+    print(path+sample(ii),'-dpng')
+end
+
+%% result table
+
+ret=table(Eg',slope','VariableNames',{'Eg','slope'},'RowNames',sample');
+writetable(ret,path+"Eg&slope.csv",'Delimiter',',','WriteRowNames',true)
