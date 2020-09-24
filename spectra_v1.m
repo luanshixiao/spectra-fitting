@@ -4,7 +4,7 @@ close all
 %% read folder
 
 % path
-path="C:\Users\ASDFGHJKL\OneDrive - mail2.sysu.edu.cn\桌面\光敏性\实验\光度计\all"+"\";
+path="ADD YOUR FOLDER PATH HERE"+"\";
 files=dir(path+"*.asc");
 % film thickness(nm)
 d=700;
