@@ -4,7 +4,7 @@ close all
 %% read folder
 
 % path
-path="ADD YOUR FOLDER PATH HERE"+"\";
+path="C:\Users\ASDFGHJKL\OneDrive - mail2.sysu.edu.cn\桌面\光敏性\实验\光度计\as-deposited"+"\";
 files=dir(path+"*.asc");
 % film thickness(nm)
 d=700;
@@ -20,6 +20,7 @@ opts.EmptyLineRule = "skip";
 
 %% for
 
+A=zeros(500,6,length(files));
 for ii=1:length(files)
     
     %% prepare spectrum data
@@ -30,8 +31,10 @@ for ii=1:length(files)
     spec=table2array(spec);
     
     T_all=spec(:,2)/100;
-    % exclude negative values
+    % exclude T<0
     T_all(T_all<0.01)=0;
+    % exclude T>0
+    T_all(T_all>1)=1;
     
     %% convert data
     
@@ -50,7 +53,7 @@ for ii=1:length(files)
     first=find(alpha_all>20000);
     first=first(1);
     % upper
-    last=find(alpha_all<60000);
+    last=find(alpha_all<50000);
     last=last(end);
     
     x=x_all(first:last);
@@ -66,7 +69,7 @@ for ii=1:length(files)
     
     region=find(xData>(xData(1)+0.15));
     region=region(1);
-    step=floor((region-1)/50);
+    step=floor((region-1)/10);
     
     jj=1;
     while jj>=1
@@ -80,12 +83,12 @@ for ii=1:length(files)
         ft = fittype( 'poly1' );
         [fitresult, gof] = fit( xfit, yfit, ft );
         
-        A(jj,1)=left;
-        A(jj,2)=right;
-        A(jj,3)=Eleft;
-        A(jj,4)=Eright;
-        A(jj,5)=gof.adjrsquare;
-        A(jj,6)=gof.rmse;
+        A(jj,1,ii)=left;
+        A(jj,2,ii)=right;
+        A(jj,3,ii)=Eleft;
+        A(jj,4,ii)=Eright;
+        A(jj,5,ii)=gof.adjrsquare;
+        A(jj,6,ii)=gof.rmse;
         
         % fitting linestyle: y=kx+b
         eq(jj,1)=fitresult.p1;%k=p1
@@ -101,14 +104,14 @@ for ii=1:length(files)
     
     %% the best fitresult
     
-    [~,r]=min(A(:,6));
+    [~,r]=max(A(:,5,ii));
     k=eq(r,1);
     b=eq(r,2);
     
     %% calculate Eg and slope by fitresult
     
-    Eg(ii)=roundn(-b/k,-2);
-    slope(ii)=roundn(k,0);
+    Eg(ii)=-b/k;
+    slope(ii)=k;
     
     %% plot
     
@@ -124,11 +127,10 @@ for ii=1:length(files)
     f2.Color='blue';
     f2.LineStyle='--';
     
-    str_Eg=num2str(Eg(ii));
-    t1=text(3,100,['Eg=' str_Eg]);
+    t1=text(3,100,"Eg="+num2str(roundn(Eg(ii),-2)));
     t1.FontSize=20;
     
-    t2=text(3,50,"slope="+num2str(slope(ii)));
+    t2=text(3,50,"slope="+num2str(roundn(slope(ii),0)));
     t2.FontSize=20;
     
     axis([1.6 3.6 0 500])
@@ -147,3 +149,5 @@ end
 
 ret=table(Eg',slope','VariableNames',{'Eg','slope'},'RowNames',sample');
 writetable(ret,path+"Eg&slope.csv",'Delimiter',',','WriteRowNames',true)
+
+time=[0,1,5,15,30,60,240];
